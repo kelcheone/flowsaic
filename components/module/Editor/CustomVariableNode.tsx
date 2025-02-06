@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useVariableStore } from "@/stores/variableStore";
 import { useModuleFlowStore } from "@/stores/ModulesManager";
 import { Trash2 } from "lucide-react";
 
@@ -31,7 +30,7 @@ const CustomVariableNode = ({
   const [name, setName] = useState(data.name || "");
   const [type, setType] = useState(data.type || "string");
   const [value, setValue] = useState(data.value || "");
-  const setVariable = useVariableStore((state) => state.setVariable);
+  const setVariable = useModuleFlowStore((state) => state.setVariable);
   const saveVariableNodeData = useModuleFlowStore(
     (state) => state.saveVariableNodeData
   );
@@ -42,15 +41,35 @@ const CustomVariableNode = ({
     deleteNode(id);
   }, [id, deleteNode]);
 
-  const handleSave = () => {
-    const variable = {
-      name,
-      type,
-      value,
-    };
-    setVariable(id, name, variable);
-    saveVariableNodeData(id, variable);
+  const handleNameUpdate = useCallback(
+    (finalName: string) => {
+      if (finalName.trim()) {
+        const variable = { name: finalName, type, value };
+        setVariable(id, finalName, variable);
+        saveVariableNodeData(id, variable);
+      }
+    },
+    [id, type, value, setVariable, saveVariableNodeData]
+  );
+
+  const handleNameBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    handleNameUpdate(e.target.value);
   };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleNameUpdate(e.currentTarget.value);
+    }
+  };
+
+  // Only update other properties when they change
+  useEffect(() => {
+    if (name.trim()) {
+      const variable = { name, type, value };
+      setVariable(id, name, variable);
+      saveVariableNodeData(id, variable);
+    }
+  }, [type, value]); // Remove name from dependencies
 
   return (
     <div className="bg-popover p-4 rounded shadow-md w-64" key={id}>
@@ -73,6 +92,8 @@ const CustomVariableNode = ({
             id="var-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onBlur={handleNameBlur}
+            onKeyDown={handleNameKeyDown}
             placeholder="Enter variable name"
           />
         </div>
@@ -101,8 +122,6 @@ const CustomVariableNode = ({
             placeholder="Enter variable value"
           />
         </div>
-
-        <Button onClick={handleSave}>Save Variable</Button>
       </div>
     </div>
   );

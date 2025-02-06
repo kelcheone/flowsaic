@@ -101,6 +101,9 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({ id }) => {
   const getFlow = useModuleFlowStore((state) => state.getFlow);
   const saveFlow = useModuleFlowStore((state) => state.saveFlow);
 
+  const takeSetNodes = useModuleFlowStore((state) => state.takeSetNodes);
+  const takeSetEdges = useModuleFlowStore((state) => state.takeSetEdges);
+
   const onConnect = useCallback(
     (params: Connection | Edge) => {
       const edgeWithId = {
@@ -157,6 +160,8 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({ id }) => {
         setNodes(flow.nodes as never);
         setEdges(flow.edges as never);
       }
+      takeSetNodes(setNodes);
+      takeSetEdges(setEdges);
     };
     fetchFlow();
   }, [id]);

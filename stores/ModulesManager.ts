@@ -1,6 +1,7 @@
 import supabase from "@/lib/supabaseInit";
 import { APINodeData, ModuleFlow, VariableNodeData } from "@/types/Modules";
 import { Edge, Node } from "@xyflow/react";
+import { Dispatch, SetStateAction } from "react";
 import { create } from "zustand";
 
 interface ModuleFlowStore {
@@ -18,6 +19,11 @@ interface ModuleFlowStore {
   deletedNodeId: string | null;
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
+  // a funtion that takes a setNode function
+  takeSetNodes: (setNodes: Dispatch<SetStateAction<Node[]>>) => void;
+  setNodes: Dispatch<SetStateAction<Node[]>>;
+  takeSetEdges: (setEdges: Dispatch<SetStateAction<Edge[]>>) => void;
+  setEdges: Dispatch<SetStateAction<Edge[]>>;
 }
 
 export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
@@ -105,7 +111,6 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
         throw new Error(error.message);
       }
       if (data && data.length > 0) {
-        console.log(data[0].flow);
         // set nodes and edges in the store
         set({ nodes: data[0].flow.nodes });
         set({ edges: data[0].flow.edges });
@@ -157,6 +162,14 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
 
       return { nodes, edges };
     });
+  },
+  setNodes: () => {},
+  takeSetNodes: (setNodes) => {
+    set({ setNodes });
+  },
+  setEdges: () => {},
+  takeSetEdges: (setEdges) => {
+    set({ setEdges });
   },
   deleteEdge: (id) => {
     set((state) => {

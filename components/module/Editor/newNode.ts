@@ -4,6 +4,7 @@
 import { APINodeData } from "@/types/Modules";
 import { Node } from "@xyflow/react";
 import { XYCoord } from "react-dnd";
+import { v4 as uuidv4 } from "uuid";
 
 export const addNewButtonNode = (
   position: XYCoord,
@@ -12,7 +13,7 @@ export const addNewButtonNode = (
   type: string
 ) => {
   const newNode: Node = {
-    id: `${item.type}-${nodes.length + 1}`,
+    id: uuidv4(),
     type: type,
     position: { x: position.x - 200, y: position.y - 40 },
     data: { label: `${item.type} node` },
@@ -27,7 +28,7 @@ export const addNewInputNode = (
   type: string
 ) => {
   const newNode: Node = {
-    id: `${item.type}-${nodes.length + 1}`,
+    id: uuidv4(),
     type: type,
     position: { x: position.x - 200, y: position.y - 40 },
     data: { label: `${item.type} node` },
@@ -42,7 +43,7 @@ export const addNewVariableNode = (
   type: string
 ) => {
   const newNode: Node = {
-    id: `${item.type}-${nodes.length + 1}`,
+    id: uuidv4(),
     type: type,
     position: { x: position.x - 200, y: position.y - 40 },
     data: { label: `${item.type} node` },
@@ -57,7 +58,7 @@ export const addNewAPINode = (
   type: string
 ) => {
   const newNode: Node<APINodeData> = {
-    id: `${item.type}-${nodes.length + 1}`,
+    id: uuidv4(),
     type: type,
     position: { x: position.x - 200, y: position.y - 40 },
     data: {

@@ -1,19 +1,20 @@
-import { create } from "zustand";
+import { create } from "zustand"
 
 type VariableType = {
-  type: string;
-  value: string;
-};
+  type: string
+  value: string
+}
 
 type VariableStore = {
-  variables: Record<string, Record<string, VariableType>>;
-  setVariable: (nodeId: string, name: string, variable: VariableType) => void;
-  getVariable: (nodeId: string, name: string) => VariableType | undefined;
-};
+  variables: Record<string, Record<string, VariableType>>
+  setVariable: (nodeId: string, name: string, variable: VariableType) => void
+  getVariable: (nodeId: string, name: string) => VariableType | undefined
+  getNodeVariables: (nodeId: string) => Record<string, VariableType>
+}
 
 export const useVariableStore = create<VariableStore>((set, get) => ({
   variables: {},
-  setVariable: (nodeId, name, variable) => {
+  setVariable: (nodeId, name, variable) =>
     set((state) => ({
       variables: {
         ...state.variables,
@@ -23,10 +24,12 @@ export const useVariableStore = create<VariableStore>((set, get) => ({
         },
       },
     })),
-      console.log(get().variables);
-  },
   getVariable: (nodeId, name) => {
-    const nodeVariables = get().variables[nodeId];
-    return nodeVariables ? nodeVariables[name] : undefined;
+    const nodeVariables = get().variables[nodeId]
+    return nodeVariables ? nodeVariables[name] : undefined
   },
-}));
+  getNodeVariables: (nodeId) => {
+    return get().variables[nodeId] || {}
+  },
+}))
+

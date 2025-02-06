@@ -17,7 +17,7 @@ export const useModuleStore = create<ModuleStore>((set) => ({
   fetchModule: async (id) => {
     try {
       const { data, error } = await supabase
-        .from("Modules")
+        .from("ModulesManager")
         .select()
         .match({ id });
       if (error) {

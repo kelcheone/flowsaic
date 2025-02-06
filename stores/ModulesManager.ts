@@ -15,6 +15,9 @@ interface ModuleFlowStore {
   getFlow: (id: string) => Promise<ModuleFlow>;
   saveAPINodeData: (id: string, data: APINodeData) => void;
   saveVariableNodeData: (id: string, data: VariableNodeData) => void;
+  deletedNodeId: string | null;
+  deleteNode: (id: string) => void;
+  deleteEdge: (id: string) => void;
 }
 
 export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
@@ -130,5 +133,36 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
       set({ nodes: nodes });
     }
     console.log(get().nodes);
+  },
+  deletedNodeId: null,
+  deleteNode: (id) => {
+    set({ deletedNodeId: id });
+    console.log("Deleting node", id);
+    set((state) => {
+      //log node that is being deleted
+      console.log(
+        "Deleting node",
+        state.nodes.find((node) => node.id === id)
+      );
+      console.log("number of nodes before deletion", state.nodes.length);
+      const nodes = state.nodes.filter((node) => node.id !== id);
+      console.log("number of nodes after deletion", nodes.length);
+      const edges = state.edges.filter(
+        (edge) => edge.source !== id && edge.target !== id
+      );
+      set({ deletedNodeId: null });
+      // call setNodes function with the new nodes
+      get().setNodes(nodes);
+      get().setEdges(edges);
+
+      return { nodes, edges };
+    });
+  },
+  deleteEdge: (id) => {
+    set((state) => {
+      const edges = state.edges.filter((edge) => edge.id !== id);
+      get().setEdges(edges);
+      return { edges };
+    });
   },
 }));

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useVariableStore } from "@/stores/variableStore";
 import { useModuleFlowStore } from "@/stores/ModulesManager";
+import { Trash2 } from "lucide-react";
 
 //variable nodedata
 type VariableNodeData = {
@@ -35,6 +36,12 @@ const CustomVariableNode = ({
     (state) => state.saveVariableNodeData
   );
 
+  const deleteNode = useModuleFlowStore((state) => state.deleteNode);
+
+  const handleDelete = useCallback(() => {
+    deleteNode(id);
+  }, [id, deleteNode]);
+
   const handleSave = () => {
     const variable = {
       name,
@@ -47,6 +54,17 @@ const CustomVariableNode = ({
 
   return (
     <div className="bg-popover p-4 rounded shadow-md w-64" key={id}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-semibold">Variable Node</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
       <Handle type="source" position={Position.Bottom} id="a" />
       <div className="space-y-4">
         <div>

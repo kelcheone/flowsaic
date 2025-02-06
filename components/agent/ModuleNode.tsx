@@ -1,0 +1,76 @@
+import { useState, useCallback } from "react";
+import { Handle, Position } from "@xyflow/react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useModuleStore } from "@/stores/agentsModuleStore";
+import { Trash2 } from "lucide-react"; // Add this import
+import { useFlowStore } from "@/stores/agents/flow";
+
+interface ModuleNodeProps {
+  id: string;
+  type: string;
+  data: {
+    name: string;
+    inputs: { [key: string]: string };
+    outputs: { [key: string]: string };
+  };
+}
+
+const ModuleNode: React.FC<ModuleNodeProps> = ({ id, type, data }) => {
+  const [inputs, setInputs] = useState(data.inputs);
+  const setModuleData = useModuleStore((state) => state.setModuleData);
+  const runModule = useModuleStore((state) => state.runModule);
+  const deleteNode = useFlowStore((state) => state.deleteNode); // Add this line
+
+  const handleInputChange = (key: string, value: string) => {
+    setInputs((prev) => ({ ...prev, [key]: value }));
+    setModuleData(id, {
+      inputs: { ...inputs, [key]: value },
+      outputs: data.outputs,
+    });
+  };
+
+  const handleTest = useCallback(() => {
+    runModule(id, type, inputs);
+  }, [id, type, inputs, runModule]);
+
+  const handleDelete = useCallback(() => {
+    deleteNode(id);
+  }, [id, deleteNode]);
+
+  return (
+    <div className="bg-popover p-4 rounded shadow-md w-64">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-semibold">{data.name || type}</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      <Handle type="target" position={Position.Top} />
+      <div className="space-y-2">
+        {Object.entries(inputs).map(([key, value]) => (
+          <div key={key}>
+            <Label htmlFor={`${id}-${key}`}>{key}</Label>
+            <Input
+              id={`${id}-${key}`}
+              value={value}
+              onChange={(e) => handleInputChange(key, e.target.value)}
+            />
+          </div>
+        ))}
+      </div>
+      <Button onClick={handleTest} className="mt-4">
+        Test Module
+      </Button>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+};
+
+export default ModuleNode;

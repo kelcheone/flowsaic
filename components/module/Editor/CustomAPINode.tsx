@@ -13,9 +13,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useVariableStore } from "@/stores/variableStore";
 import { APINodeData } from "@/types/Modules";
 import { useModuleFlowStore } from "@/stores/ModulesManager";
+import { Trash, Trash2 } from "lucide-react";
 
 type APIOutput = {
   success: boolean;
@@ -38,8 +38,10 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
   const [useUrlParams, setUseUrlParams] = useState(data.useUrlParams || false);
 
   const edges = useEdges();
-  const getVariable = useVariableStore((state) => state.getVariable);
-  const setVariable = useVariableStore((state) => state.setVariable);
+  const getVariable = useModuleFlowStore((state) => state.getVariable);
+  const setVariable = useModuleFlowStore((state) => state.setVariable);
+
+  const deleteNode = useModuleFlowStore((state) => state.deleteNode);
 
   const getConnectedSourceNodes = useCallback(() => {
     return edges
@@ -155,8 +157,23 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
     saveNodeData(id, nodeData);
   };
 
+  const handleDelete = useCallback(() => {
+    deleteNode(id);
+  }, [id, deleteNode]);
+
   return (
     <div className="bg-popover p-4 rounded shadow-md w-96" key={id}>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Custom API Node</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
       <Handle type="target" position={Position.Top} />
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

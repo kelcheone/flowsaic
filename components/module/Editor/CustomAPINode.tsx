@@ -17,6 +17,13 @@ import { useVariableStore } from "@/stores/variableStore";
 import { APINodeData } from "@/types/Modules";
 import { useModuleFlowStore } from "@/stores/ModulesManager";
 
+type APIOutput = {
+  success: boolean;
+  statusCode: number;
+  data: any;
+  error?: string;
+};
+
 const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
   const [name, setName] = useState(data.name || "");
   const [method, setMethod] = useState(data.method || "GET");
@@ -27,11 +34,12 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
   const [params, setParams] = useState(data.params || "");
   const [headers, setHeaders] = useState(data.headers || "");
   const [body, setBody] = useState(data.body || "");
-  const [response, setResponse] = useState(data.response || "");
+  const [output, setOutput] = useState<APIOutput | null>(null);
   const [useUrlParams, setUseUrlParams] = useState(data.useUrlParams || false);
 
   const edges = useEdges();
   const getVariable = useVariableStore((state) => state.getVariable);
+  const setVariable = useVariableStore((state) => state.setVariable);
 
   const getConnectedSourceNodes = useCallback(() => {
     return edges
@@ -62,6 +70,16 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
     }
   };
 
+  const simulateAPICall = async (config: any): Promise<Response> => {
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
+    return new Response(
+      JSON.stringify({ message: "This is a simulated API response" }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const resolvedEndpoint = replaceVariables(endpoint);
@@ -71,26 +89,46 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
     const resolvedHeaders = replaceVariables(headers);
     const resolvedBody = replaceVariables(body);
 
-    // Here you would typically make the API call
-    // For demonstration, we'll just set a mock response
+    try {
+      // Here you would typically make the actual API call
+      // For demonstration, we'll simulate an API call
+      const response = await simulateAPICall({
+        method,
+        endpoint: resolvedEndpoint,
+        authType,
+        apiKey: resolvedApiKey,
+        bearerToken: resolvedBearerToken,
+        params: useUrlParams ? resolvedParams : safeParse(resolvedParams),
+        headers: safeParse(resolvedHeaders),
+        body: safeParse(resolvedBody),
+      });
 
-    // log the response to results.
-    console.log(
-      JSON.stringify(
-        {
-          method,
-          endpoint: resolvedEndpoint,
-          authType,
-          apiKey: resolvedApiKey,
-          bearerToken: resolvedBearerToken,
-          params: useUrlParams ? resolvedParams : safeParse(resolvedParams),
-          headers: headers ? safeParse(resolvedHeaders) : {},
-          body: body ? safeParse(resolvedBody) : {},
-        },
-        null,
-        2
-      )
-    );
+      const apiOutput: APIOutput = {
+        success: response.ok,
+        statusCode: response.status,
+        data: await response.json(),
+      };
+
+      setOutput(apiOutput);
+      // Save the output as a variable that can be used by connected nodes
+      setVariable(id, "apiOutput", {
+        type: "json",
+        value: JSON.stringify(apiOutput),
+      });
+    } catch (error) {
+      const apiOutput: APIOutput = {
+        success: false,
+        statusCode: 500,
+        data: null,
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      };
+      setOutput(apiOutput);
+      setVariable(id, "apiOutput", {
+        type: "json",
+        value: JSON.stringify(apiOutput),
+      });
+    }
   };
 
   // save nodeData data variable
@@ -104,7 +142,7 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
     params,
     headers,
     body,
-    response,
+    output: output || undefined,
     useUrlParams,
   };
 
@@ -216,10 +254,24 @@ const CustomAPINode = ({ data, id }: { data: APINodeData; id: string }) => {
         </div>
       </form>
 
-      {response && (
+      {output && (
         <div className="mt-4">
-          <Label>Response</Label>
-          <Textarea value={response} readOnly className="mt-2" rows={10} />
+          <Label>API Output</Label>
+          <div
+            className={`p-2 rounded ${
+              output.success ? "bg-green-100" : "bg-red-100"
+            }`}
+          >
+            <p>Success: {output.success ? "Yes" : "No"}</p>
+            <p>Status Code: {output.statusCode}</p>
+            {output.error && <p>Error: {output.error}</p>}
+          </div>
+          <Textarea
+            value={JSON.stringify(output.data, null, 2)}
+            readOnly
+            className="mt-2"
+            rows={10}
+          />
         </div>
       )}
 

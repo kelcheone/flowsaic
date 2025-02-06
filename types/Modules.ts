@@ -15,6 +15,7 @@ export type Module = {
 export interface ModuleFlow {
   nodes: Node[];
   edges: Edge[];
+  schema: object | null;
 }
 
 // custom node
@@ -35,6 +36,10 @@ export type APINodeData = {
 
 export type VariableNodeData = {
   name: string;
+  type: string;
+  value: string;
+};
+export type VariableType = {
   type: string;
   value: string;
 };

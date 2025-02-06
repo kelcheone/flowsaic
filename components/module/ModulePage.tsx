@@ -11,7 +11,7 @@ type ModulePageProps = {
 const ModulePage: FC<ModulePageProps> = ({ id }) => {
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex h-screen">
+      <div className="flex h-[calc(100vh-4rem)]">
         <SidePanel />
         <FlowCanvas id={id} />
       </div>

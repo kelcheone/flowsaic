@@ -1,8 +1,14 @@
 import supabase from "@/lib/supabaseInit";
-import { APINodeData, ModuleFlow, VariableNodeData } from "@/types/Modules";
+import {
+  APINodeData,
+  ModuleFlow,
+  VariableNodeData,
+  VariableType,
+} from "@/types/Modules";
 import { Edge, Node } from "@xyflow/react";
 import { Dispatch, SetStateAction } from "react";
 import { create } from "zustand";
+import { SchemaManager } from "@/utils/schemaManager";
 
 interface ModuleFlowStore {
   moduleFlow: ModuleFlow;
@@ -24,15 +30,26 @@ interface ModuleFlowStore {
   setNodes: Dispatch<SetStateAction<Node[]>>;
   takeSetEdges: (setEdges: Dispatch<SetStateAction<Edge[]>>) => void;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
+
+  // handle variables
+  variables: Record<string, Record<string, VariableType>>;
+  setVariable: (nodeId: string, name: string, variable: VariableType) => void;
+  getVariable: (nodeId: string, name: string) => VariableType | undefined;
+  getNodeVariables: (nodeId: string) => Record<string, VariableType>;
+  logVariables: () => void;
+  schema: object | null;
+  updateSchema: () => void;
 }
 
 export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
   moduleFlow: {
     nodes: [],
     edges: [],
+    schema: null,
   },
   nodes: [],
   edges: [],
+  schema: null,
   setModuleFlow: (moduleFlow) => {
     set({ moduleFlow }), console.log(moduleFlow);
   },
@@ -56,7 +73,15 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
   },
 
   saveFlow: async (id) => {
-    set({ moduleFlow: { nodes: get().nodes, edges: get().edges } });
+    const flowData = {
+      nodes: get().nodes,
+      edges: get().edges,
+      schema: get().schema || {},
+    };
+
+    set({ moduleFlow: flowData });
+    console.log("Saving flow:", flowData);
+
     try {
       // First check if flow exists
       const { data: existingFlow, error: fetchError } = await supabase
@@ -66,7 +91,6 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
         .single();
 
       if (fetchError && fetchError.code !== "PGRST116") {
-        // PGRST116 is "not found" error
         throw fetchError;
       }
 
@@ -75,14 +99,14 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
         // Update existing flow
         result = await supabase
           .from("ModulesFlow")
-          .update({ flow: get().moduleFlow })
+          .update({ flow: flowData })
           .match({ module_id: id })
           .select();
       } else {
         // Insert new flow
         result = await supabase
           .from("ModulesFlow")
-          .insert({ module_id: id, flow: get().moduleFlow })
+          .insert({ module_id: id, flow: flowData })
           .select();
       }
 
@@ -101,20 +125,25 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
     console.log(get().edges);
   },
   getFlow: async (id) => {
-    // get flow from supabase
     try {
       const { data, error } = await supabase
         .from("ModulesFlow")
         .select()
         .match({ module_id: id });
+
       if (error) {
         throw new Error(error.message);
       }
+
       if (data && data.length > 0) {
-        // set nodes and edges in the store
-        set({ nodes: data[0].flow.nodes });
-        set({ edges: data[0].flow.edges });
-        return data[0].flow;
+        const flowData = data[0].flow;
+        // set nodes, edges and schema in the store
+        set({
+          nodes: flowData.nodes,
+          edges: flowData.edges,
+          schema: flowData.schema || null, // handle legacy flows that might not have schema
+        });
+        return flowData;
       }
     } catch (error) {
       console.error(error);
@@ -137,30 +166,49 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
       nodes[index].data = data;
       set({ nodes: nodes });
     }
-    console.log(get().nodes);
   },
   deletedNodeId: null,
   deleteNode: (id) => {
     set({ deletedNodeId: id });
     console.log("Deleting node", id);
     set((state) => {
-      //log node that is being deleted
       console.log(
         "Deleting node",
         state.nodes.find((node) => node.id === id)
       );
       console.log("number of nodes before deletion", state.nodes.length);
+
+      // Remove node from nodes array
       const nodes = state.nodes.filter((node) => node.id !== id);
-      console.log("number of nodes after deletion", nodes.length);
+
+      // Remove connected edges
       const edges = state.edges.filter(
         (edge) => edge.source !== id && edge.target !== id
       );
+
+      // Remove variables associated with this node
+      const { [id]: deletedVars, ...remainingVars } = state.variables;
+
+      // Generate new schema without the deleted node's variables
+      const allVariables: Record<string, any> = {};
+      Object.values(remainingVars).forEach((nodeVars) => {
+        Object.entries(nodeVars).forEach(([varName, varValue]) => {
+          allVariables[varName] = varValue.value;
+        });
+      });
+
+      const newSchema = SchemaManager.generateSchema(allVariables);
+
       set({ deletedNodeId: null });
-      // call setNodes function with the new nodes
       get().setNodes(nodes);
       get().setEdges(edges);
 
-      return { nodes, edges };
+      return {
+        nodes,
+        edges,
+        variables: remainingVars,
+        schema: newSchema,
+      };
     });
   },
   setNodes: () => {},
@@ -177,5 +225,75 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
       get().setEdges(edges);
       return { edges };
     });
+  },
+  variables: {},
+  setVariable: (nodeId, name, variable) => {
+    set((state) => {
+      // Find old variable name if this is a rename operation
+      const oldVarName = Object.keys(state.variables[nodeId] || {}).find(
+        (key) =>
+          key !== name && state.variables[nodeId][key].value === variable.value
+      );
+
+      // Create new state with updated variables
+      const newState = {
+        variables: {
+          ...state.variables,
+          [nodeId]: {
+            ...state.variables[nodeId],
+            [name]: variable,
+          },
+        },
+      };
+
+      // If this was a rename, remove the old variable name
+      if (oldVarName) {
+        delete newState.variables[nodeId][oldVarName];
+      }
+
+      // After updating variables, generate new schema
+      const allVariables: Record<string, any> = {};
+      Object.values(newState.variables).forEach((nodeVars) => {
+        Object.entries(nodeVars).forEach(([varName, varValue]) => {
+          // Only add if variable name is not empty and valid
+          if (
+            varName &&
+            varName.trim() &&
+            /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(varName)
+          ) {
+            allVariables[varName] = {
+              type: varValue.type,
+              value: varValue.value,
+            };
+          }
+        });
+      });
+
+      const newSchema = SchemaManager.generateSchema(allVariables);
+      return { ...newState, schema: newSchema };
+    });
+  },
+
+  updateSchema: () => {
+    const allVariables: Record<string, any> = {};
+    Object.values(get().variables).forEach((nodeVars) => {
+      Object.entries(nodeVars).forEach(([varName, varValue]) => {
+        allVariables[varName] = varValue.value;
+      });
+    });
+
+    const newSchema = SchemaManager.generateSchema(allVariables);
+    set({ schema: newSchema });
+  },
+
+  getVariable: (nodeId, name) => {
+    return get().variables[nodeId]?.[name];
+  },
+  getNodeVariables: (nodeId) => {
+    return get().variables[nodeId] || {};
+  },
+  logVariables: () => {
+    console.log(get().variables);
+    console.log(get().schema);
   },
 }));

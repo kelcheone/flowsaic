@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 //uuid
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -18,6 +18,8 @@ import {
   applyNodeChanges,
   NodeChange,
   EdgeChange,
+  DefaultEdgeOptions,
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useDrop } from "react-dnd";
@@ -33,7 +35,21 @@ import {
   addNewInputNode,
   addNewVariableNode,
 } from "./newNode";
-
+import CustomEdgeModule from "@/components/flow/CustomEdgeModule";
+const defaultEdgeOptions: DefaultEdgeOptions = {
+  type: "custom-edge",
+  animated: true,
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+    color: "#fff",
+  },
+  style: {
+    strokeWidth: 2,
+    stroke: "#fff",
+  },
+};
 const nodeTypes = {
   customInput: CustomInputNode,
   customButton: CustomButtonNode,
@@ -144,10 +160,17 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({ id }) => {
     };
     fetchFlow();
   }, [id]);
-
+  const edgeTypes = useMemo(() => ({ "custom-edge": CustomEdgeModule }), []);
   return (
-    // @ts-ignore
-    <div ref={drop} className="flex-1">
+    <div
+      // @ts-ignore
+      ref={drop}
+      className="flex-1"
+      style={{
+        height: "calc(100vh - 4rem)",
+        backgroundColor: "#2D3748",
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -155,8 +178,10 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({ id }) => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         draggable={true}
         nodesDraggable={true}
+        defaultEdgeOptions={defaultEdgeOptions}
       >
         {/* darkish bg , emerald 400 color */}
         <Background
@@ -167,8 +192,12 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({ id }) => {
           variant={BackgroundVariant.Dots}
         />
 
-        <Controls />
-
+        <Controls
+          style={{
+            backgroundColor: "#2D3748",
+            color: "#000",
+          }}
+        />
         <Panel position="top-left">
           <div className="flex flex-row bg-secondary p-2 rounded shadow">
             <div className="bg-secondary p-2 rounded shadow">

@@ -1,3 +1,4 @@
+"use client";
 import {
   Card,
   CardContent,
@@ -7,17 +8,17 @@ import {
 } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
+import { useAgentStore } from "@/stores/agents/store";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function AgentsList() {
-  const agents = [
-    { id: 1, name: "Trading Agent", description: "Automated trading strategy" },
-    {
-      id: 2,
-      name: "Monitor Agent",
-      description: "Price monitoring and alerts",
-    },
-  ];
+  const agents = useAgentStore((state) => state.Agents);
+  const fetchAgents = useAgentStore((state) => state.fetchAgents);
 
+  useEffect(() => {
+    fetchAgents();
+  }, []);
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {agents.map((agent) => (
@@ -27,7 +28,12 @@ export default function AgentsList() {
             <CardDescription>{agent.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="default">View Details</Button>
+            <Link
+              href={`/agent/${agent.id}`}
+              className="bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            >
+              View
+            </Link>
           </CardContent>
         </Card>
       ))}

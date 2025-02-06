@@ -1,4 +1,3 @@
-import OverviewFlow from "@/components/module/ExampleEditor/Editor";
 import ModulePage from "@/components/module/ModulePage";
 
 export default async function Page({
@@ -8,10 +7,7 @@ export default async function Page({
 }) {
   const { id } = await params;
   return (
-    <div
-      className="bg-background p-4"
-      style={{ height: "100vh", width: "100vw" }}
-    >
+    <div className="bg-background">
       <ModulePage id={id} />
     </div>
   );

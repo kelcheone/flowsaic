@@ -9,7 +9,7 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="text-xl font-bold">
-              Your App
+              FlowSaic
             </Link>
             <div className="hidden md:block ml-10">
               <div className="flex items-center space-x-4">

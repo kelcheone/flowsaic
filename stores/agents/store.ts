@@ -11,6 +11,8 @@ export type Module = {
   inputs: { [key: string]: string };
   outputs: { [key: string]: string };
   data: any;
+  schema: any;
+  schemaId?: string;
 };
 
 // listed modules in the side panel
@@ -102,7 +104,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 inputs: {},
                 outputs: {},
                 data: {},
+                schema: item.flow.schema,
               };
+              console.log(item.flow.schema);
 
               // Get inputs and outputs
               item.flow.nodes.forEach((node: any) => {

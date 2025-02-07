@@ -1,10 +1,13 @@
 import supabase from "@/lib/supabaseInit";
 import { create } from "zustand";
+import { SchemaDefinition } from "./agents/nillion";
 
 interface ModuleData {
   type: string;
   inputs: { [key: string]: string };
   outputs: { [key: string]: string };
+  schema: SchemaDefinition;
+  schemaId?: string;
 }
 
 type Module = {
@@ -15,7 +18,7 @@ type Module = {
 
 interface ModuleStore {
   modules: { [key: string]: ModuleData };
-  addModule: (id: string, type: string) => void;
+  addModule: (id: string, type: string, schema: SchemaDefinition) => void;
   setModuleData: (id: string, data: Partial<ModuleData>) => void;
   runModule: (
     id: string,
@@ -27,11 +30,16 @@ interface ModuleStore {
 
 export const useModuleStore = create<ModuleStore>((set, get) => ({
   modules: {},
-  addModule: (id, type) => {
+  addModule: (id, type, schema) => {
     set((state) => ({
       modules: {
         ...state.modules,
-        [id]: { type, inputs: {}, outputs: {} },
+        [id]: {
+          type,
+          inputs: {},
+          outputs: {},
+          schema,
+        },
       },
     }));
   },

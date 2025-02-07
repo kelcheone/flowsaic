@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useModuleStore } from "@/stores/agentsModuleStore";
 import { Trash2 } from "lucide-react"; // Add this import
 import { useFlowStore } from "@/stores/agents/flow";
+import { SchemaDefinition, useNillionStore } from "@/stores/agents/nillion";
 
 interface ModuleNodeProps {
   id: string;
@@ -14,6 +15,8 @@ interface ModuleNodeProps {
     name: string;
     inputs: { [key: string]: string };
     outputs: { [key: string]: string };
+    schema: SchemaDefinition;
+    schemaId: string;
   };
 }
 
@@ -21,7 +24,10 @@ const ModuleNode: React.FC<ModuleNodeProps> = ({ id, type, data }) => {
   const [inputs, setInputs] = useState(data.inputs);
   const setModuleData = useModuleStore((state) => state.setModuleData);
   const runModule = useModuleStore((state) => state.runModule);
-  const deleteNode = useFlowStore((state) => state.deleteNode); // Add this line
+  const deleteNode = useFlowStore((state) => state.deleteNode);
+  const createSchema = useNillionStore((state) => state.createSchema);
+  const updateNodeSchemaId = useFlowStore((state) => state.updateNodeSchemaId);
+  const deleteSchema = useNillionStore((state) => state.deleteSchema);
 
   const handleInputChange = (key: string, value: string) => {
     setInputs((prev) => ({ ...prev, [key]: value }));
@@ -32,11 +38,20 @@ const ModuleNode: React.FC<ModuleNodeProps> = ({ id, type, data }) => {
   };
 
   const handleTest = useCallback(() => {
-    runModule(id, type, inputs);
+    // runModule(id, type, inputs);
+    console.log(data.schema);
+    (async () => {
+      const schemaId = await createSchema(data.schema, data.name);
+      updateNodeSchemaId(id, schemaId);
+      // also update data.schemaId
+      data.schemaId = schemaId;
+    })();
   }, [id, type, inputs, runModule]);
 
   const handleDelete = useCallback(() => {
     deleteNode(id);
+
+    deleteSchema(data.schemaId);
   }, [id, deleteNode]);
 
   return (

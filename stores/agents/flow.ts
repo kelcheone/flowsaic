@@ -35,6 +35,9 @@ export type FlowStore = {
   setNodes: Dispatch<SetStateAction<Node[]>>;
   takeSetEdges: (setEdges: Dispatch<SetStateAction<Edge[]>>) => void;
   setEdges: Dispatch<SetStateAction<Edge[]>>;
+
+  // update node with schemaId
+  updateNodeSchemaId: (id: string, schemaId: string) => void;
 };
 
 export const useFlowStore = create<FlowStore>((set, get) => ({
@@ -158,6 +161,18 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const edges = state.edges.filter((edge) => edge.id !== id);
       get().setEdges(edges);
       return { edges };
+    });
+  },
+  updateNodeSchemaId: (id, schemaId) => {
+    set((state) => {
+      const nodes = state.nodes.map((node) => {
+        if (node.id === id) {
+          return { ...node, data: { ...node.data, schemaId } };
+        }
+        return node;
+      });
+      get().setNodes(nodes);
+      return { nodes };
     });
   },
 }));

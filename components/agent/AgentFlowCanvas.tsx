@@ -26,6 +26,7 @@ import { useFlowStore } from "@/stores/agents/flow";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "../ui/button";
 import CustomEdge from "../flow/CustomEdge";
+import { scheduler } from "timers/promises";
 const nodeTypes = {
   moduleNode: ModuleNode,
 };
@@ -117,6 +118,8 @@ const ModuleFlowCanvas: FC<ModuleFlowCanvasProps> = ({ id }) => {
             type: item.type,
             inputs: item.data.inputs,
             outputs: item.data.outputs,
+            schema: item.data.schema,
+            schemaId: item.data.schemaId,
           },
         };
         //@ts-ignore

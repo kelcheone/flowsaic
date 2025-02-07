@@ -8,12 +8,21 @@ import {
   EdgeChange,
   Node,
   NodeChange,
-  OnConnect,
   OnEdgesChange,
   OnNodesChange,
 } from "@xyflow/react";
 import { Dispatch, SetStateAction } from "react";
 import { create } from "zustand";
+import { SchemaDefinition } from "./nillion";
+
+interface NodeData {
+  name: string;
+  inputs: { [key: string]: string };
+  outputs: { [key: string]: string };
+  schema: SchemaDefinition;
+  schemaId?: string;
+  connectedSchemas: Record<string, string>; // or { [key: string]: string }
+}
 
 export type FlowStore = {
   nodes: Node[];
@@ -22,7 +31,6 @@ export type FlowStore = {
   addEdge: (edge: Edge) => void;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
-  onConnect: OnConnect;
   setAgentFlowNode: (node: Node) => void;
   setAgentFlowEdge: (edge: Edge) => void;
   saveFlow: (id: string) => void;
@@ -57,16 +65,40 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     });
   },
 
-  onConnect: (connection: Connection) => {
-    set({
-      edges: addEdge({ ...connection, type: "custom-edge" }, get().edges),
+  setAgentFlowEdge: (edge) => {
+    // Add the edge
+    set({ edges: [...get().edges, edge] });
+
+    // Update the target node to store the source node's schemaId
+    set((state) => {
+      const nodes = state.nodes.map((node) => {
+        if (node.id === edge.target) {
+          const sourceNode = state.nodes.find((n) => n.id === edge.source);
+          // Ensure we're getting the current connectedSchemas or initialize as empty object
+          const currentConnectedSchemas = node.data?.connectedSchemas ?? {};
+
+          if (sourceNode?.data?.schemaId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                connectedSchemas: {
+                  ...currentConnectedSchemas,
+                  [edge.source]: sourceNode.data.schemaId,
+                },
+              },
+            };
+          }
+        }
+        return node;
+      });
+      get().setNodes(nodes);
+      return { nodes };
     });
+    console.log(get().edges);
+    console.log(get().nodes);
   },
 
-  setAgentFlowEdge: (edge) => {
-    set({ edges: [...get().edges, edge] });
-    console.log(get().edges);
-  },
   setAgentFlowNode: (node) => {
     set((state) => {
       const existingNodeIndex = state.nodes.findIndex((n) => n.id === node.id);
@@ -89,6 +121,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     }
 
     const { nodes, edges } = get();
+    console.log("Nodes", nodes);
     const flowData = {
       agent_id: id,
       flow: { nodes, edges },
@@ -135,17 +168,40 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   deleteNode: (id) => {
     set({ deletedNodeId: id });
     set((state) => {
+      // Filter out the deleted node
       const nodes = state.nodes.filter((node) => node.id !== id);
+
+      // Filter out edges connected to the deleted node
       const edges = state.edges.filter(
         (edge) => edge.source !== id && edge.target !== id
       );
+
+      // Clean up connectedSchemas references in all remaining nodes
+      const updatedNodes = nodes.map((node) => {
+        if (
+          node.data?.connectedSchemas &&
+          (node.data.connectedSchemas as Record<string, string>)[id]
+        ) {
+          const { [id]: _, ...remainingSchemas } = node.data
+            .connectedSchemas as Record<string, string>;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              connectedSchemas: remainingSchemas,
+            },
+          };
+        }
+        return node;
+      });
+
       set({ deletedNodeId: null });
       // call setNodes function with the new nodes
-      get().setNodes(nodes);
+      get().setNodes(updatedNodes);
       get().setEdges(edges);
       console.log("Deleted node", id);
       console.log(get().nodes.length);
-      return { nodes, edges };
+      return { nodes: updatedNodes, edges };
     });
   },
   setNodes: () => {},
@@ -158,9 +214,28 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   },
   deleteEdge: (id) => {
     set((state) => {
+      const edgeToDelete = state.edges.find((edge) => edge.id === id);
       const edges = state.edges.filter((edge) => edge.id !== id);
+
+      // Remove the source schemaId from target node's connectedSchemas
+      const nodes = state.nodes.map((node) => {
+        if (edgeToDelete && node.id === edgeToDelete.target) {
+          const { [edgeToDelete.source]: _, ...remainingSchemas } = (node.data
+            ?.connectedSchemas || {}) as Record<string, string>;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              connectedSchemas: remainingSchemas || {},
+            },
+          };
+        }
+        return node;
+      });
+
       get().setEdges(edges);
-      return { edges };
+      get().setNodes(nodes);
+      return { edges, nodes };
     });
   },
   updateNodeSchemaId: (id, schemaId) => {

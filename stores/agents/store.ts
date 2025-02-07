@@ -13,6 +13,8 @@ export type Module = {
   data: any;
   schema: any;
   schemaId?: string;
+  // nodeId : schemaId
+  connectedSchemas?: { [sourceId: string]: string };
 };
 
 // listed modules in the side panel

@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Button } from "../ui/button";
 import CustomEdge from "../flow/CustomEdge";
 import { scheduler } from "timers/promises";
+import { connected } from "process";
 const nodeTypes = {
   moduleNode: ModuleNode,
 };
@@ -120,6 +121,7 @@ const ModuleFlowCanvas: FC<ModuleFlowCanvasProps> = ({ id }) => {
             outputs: item.data.outputs,
             schema: item.data.schema,
             schemaId: item.data.schemaId,
+            connectedSchemas: {},
           },
         };
         //@ts-ignore

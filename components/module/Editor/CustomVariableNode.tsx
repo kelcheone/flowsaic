@@ -10,14 +10,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useModuleFlowStore } from "@/stores/ModulesManager";
-import { Trash2 } from "lucide-react";
+import { SaveIcon, Trash2 } from "lucide-react";
 
 //variable nodedata
 type VariableNodeData = {
   name: string;
   type: string;
   value: string;
+  isSecure?: boolean;
 };
 
 const CustomVariableNode = ({
@@ -30,6 +32,7 @@ const CustomVariableNode = ({
   const [name, setName] = useState(data.name || "");
   const [type, setType] = useState(data.type || "string");
   const [value, setValue] = useState(data.value || "");
+  const [isSecure, setIsSecure] = useState(data.isSecure || false);
   const setVariable = useModuleFlowStore((state) => state.setVariable);
   const saveVariableNodeData = useModuleFlowStore(
     (state) => state.saveVariableNodeData
@@ -44,12 +47,13 @@ const CustomVariableNode = ({
   const handleNameUpdate = useCallback(
     (finalName: string) => {
       if (finalName.trim()) {
-        const variable = { name: finalName, type, value };
+        const variable = { name: finalName, type, value, isSecure };
         setVariable(id, finalName, variable);
         saveVariableNodeData(id, variable);
+        console.log(variable);
       }
     },
-    [id, type, value, setVariable, saveVariableNodeData]
+    [id, type, value, isSecure, setVariable, saveVariableNodeData]
   );
 
   const handleNameBlur = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -65,11 +69,11 @@ const CustomVariableNode = ({
   // Only update other properties when they change
   useEffect(() => {
     if (name.trim()) {
-      const variable = { name, type, value };
+      const variable = { name, type, value, isSecure };
       setVariable(id, name, variable);
       saveVariableNodeData(id, variable);
     }
-  }, [type, value]); // Remove name from dependencies
+  }, [type, value, isSecure]); // Remove name from dependencies
 
   return (
     <div className="bg-popover p-4 rounded shadow-md w-64" key={id}>
@@ -113,15 +117,34 @@ const CustomVariableNode = ({
           </Select>
         </div>
 
+        <div className="flex items-center justify-between">
+          <Label htmlFor="secure-mode" className="cursor-pointer">
+            Secure Variable
+          </Label>
+          <Switch
+            id="secure-mode"
+            checked={isSecure}
+            onCheckedChange={setIsSecure}
+          />
+        </div>
+
         <div>
-          <Label htmlFor="var-value">Variable Value</Label>
+          <Label htmlFor="var-value">
+            Variable Value {isSecure && "(Stored Securely)"}
+          </Label>
           <Input
             id="var-value"
             value={value}
+            type={isSecure ? "password" : "text"}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Enter variable value"
           />
         </div>
+        {/* button to save  */}
+        <Button className="w-full" onClick={() => handleNameUpdate(name)}>
+          <SaveIcon className="h-4 w-4 mr-2" />
+          Set Variable
+        </Button>
       </div>
     </div>
   );

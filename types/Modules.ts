@@ -42,4 +42,5 @@ export type VariableNodeData = {
 export type VariableType = {
   type: string;
   value: string;
+  isSecure?: boolean;
 };

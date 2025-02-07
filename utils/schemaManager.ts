@@ -2,17 +2,23 @@ interface VariableSchema {
   type: string;
   format?: string;
   coerce?: boolean;
+  properties?: Record<string, any>;
+  required?: string[];
 }
 
 export class SchemaManager {
   static generateSchema(
-    variables: Record<string, { value: any; type: string }>
+    variables: Record<string, { value: any; type: string; isSecure?: boolean }>
   ): object {
+    console.log("Generating schema for variables:", variables);
     const properties: Record<string, VariableSchema> = {
       _id: {
         type: "string",
         format: "uuid",
         coerce: true,
+      },
+      module_output: {
+        type: "object",
       },
     };
 
@@ -27,13 +33,27 @@ export class SchemaManager {
     });
 
     for (const [key, variable] of validVariables) {
-      properties[key] = {
-        type: variable.type || this.inferType(variable.value),
-      };
+      if (variable.isSecure) {
+        // Handle secure variables
+        properties[key] = {
+          type: "object",
+          properties: {
+            $share: {
+              type: variable.type || this.inferType(variable.value),
+            },
+          },
+          required: ["$share"],
+        };
+      } else {
+        // Handle regular variables
+        properties[key] = {
+          type: variable.type || this.inferType(variable.value),
+        };
 
-      if (this.isDateTime(variable.value)) {
-        properties[key].format = "date-time";
-        properties[key].coerce = true;
+        if (this.isDateTime(variable.value)) {
+          properties[key].format = "date-time";
+          properties[key].coerce = true;
+        }
       }
     }
 
@@ -43,7 +63,11 @@ export class SchemaManager {
       items: {
         type: "object",
         properties,
-        required: ["_id", ...validVariables.map(([key]) => key)],
+        required: [
+          "_id",
+          "module_output",
+          ...validVariables.map(([key]) => key),
+        ],
         additionalProperties: false,
       },
     };

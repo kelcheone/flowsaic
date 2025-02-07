@@ -41,6 +41,25 @@ interface ModuleFlowStore {
   updateSchema: () => void;
 }
 
+const defaultSchema = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      _id: {
+        type: "string",
+        format: "uuid",
+        coerce: true,
+      },
+      module_output: {
+        type: "object",
+      },
+    },
+    required: ["_id", "module_output"],
+    additionalProperties: false,
+  },
+};
 export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
   moduleFlow: {
     nodes: [],
@@ -76,7 +95,7 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
     const flowData = {
       nodes: get().nodes,
       edges: get().edges,
-      schema: get().schema || {},
+      schema: get().schema || defaultSchema,
     };
 
     set({ moduleFlow: flowData });
@@ -235,13 +254,19 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
           key !== name && state.variables[nodeId][key].value === variable.value
       );
 
+      // Convert "json" type to "object"
+      const updatedVariable = {
+        ...variable,
+        type: variable.type === "json" ? "object" : variable.type,
+      };
+
       // Create new state with updated variables
       const newState = {
         variables: {
           ...state.variables,
           [nodeId]: {
             ...state.variables[nodeId],
-            [name]: variable,
+            [name]: updatedVariable,
           },
         },
       };
@@ -264,6 +289,7 @@ export const useModuleFlowStore = create<ModuleFlowStore>((set, get) => ({
             allVariables[varName] = {
               type: varValue.type,
               value: varValue.value,
+              isSecure: varValue.isSecure,
             };
           }
         });
